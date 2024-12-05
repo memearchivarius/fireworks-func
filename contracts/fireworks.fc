@@ -423,7 +423,7 @@ cell build_firework(int id, int value, int op_code, cell init_code, slice sender
 
     }
 
-        elseif (op == 0x00000051) {
+    elseif (op == 0x00000051) {
         cell addr = in_msg_body~load_ref();
         sender_address = addr.begin_parse();
 
@@ -434,7 +434,7 @@ cell build_firework(int id, int value, int op_code, cell init_code, slice sender
 
     }
 
-        elseif (op == 0x00000080) {
+    elseif (op == 0x00000080) {
         cell addr = in_msg_body~load_ref();
         sender_address = addr.begin_parse();
 
@@ -445,7 +445,7 @@ cell build_firework(int id, int value, int op_code, cell init_code, slice sender
 
     }
 
-            elseif (op == 0x00000090) {
+    elseif (op == 0x00000090) {
         cell addr = in_msg_body~load_ref();
         sender_address = addr.begin_parse();
 
