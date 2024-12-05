@@ -16,4 +16,5 @@ export async function run(provider: NetworkProvider) {
     // await provider.waitForDeploy(fireworks.address); we have to skip this checker, because contract instantly destroyed
 
     console.log('Fireworks launched on ', fireworks.address, 'address');
+    console.log(fireworks.init!.code.hash())
 }
