@@ -37,7 +37,7 @@ export enum ExitCode {
     InvalidDstAddr = 36,
     NotEnoughTON = 37,
     NotEnoughExtraCurrencies = 38,
-    NotEnoughFounds = 40,
+    NotEnoughFunds = 40,
     LibOutOfLimit = 43,
 }
 

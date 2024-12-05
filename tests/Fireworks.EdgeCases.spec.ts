@@ -448,7 +448,7 @@ describe('Edge Cases Tests', () => {
     it('action phase | exit code = 40', async () => {
         const body = beginCell()
             .storeUint(OPCODES.FAKED_LAUNCH, 32)
-            .storeUint(ExitCode.NotEnoughFounds, 8)
+            .storeUint(ExitCode.NotEnoughFunds, 8)
             .storeRef(beginCell().endCell())
             .endCell();
         const launchResult = await fireworks.sendBadMessage(launcher.getSender(), toNano('1'), body);
@@ -458,7 +458,7 @@ describe('Edge Cases Tests', () => {
             to: fireworks.address,
             success: false,
             aborted: true,
-            actionResultCode: ExitCode.NotEnoughFounds,
+            actionResultCode: ExitCode.NotEnoughFunds,
             // exit code = 40 | Not enough funds to process a message. This error is thrown when there is only enough gas to cover part of the message, but does not cover it completely.
             op: OPCODES.FAKED_LAUNCH,
         });
