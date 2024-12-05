@@ -12,7 +12,7 @@ export async function run(provider: NetworkProvider) {
         )
     );
 
-    await fireworks.sendDeployLaunch(provider.sender(), toNano('3.6'));
+    await fireworks.sendDeployLaunch(provider.sender(), toNano('3'));
     // await provider.waitForDeploy(fireworks.address); we have to skip this checker, because contract instantly destroyed
 
     console.log('Fireworks launched on ', fireworks.address, 'address');
