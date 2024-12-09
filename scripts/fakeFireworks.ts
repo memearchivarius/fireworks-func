@@ -13,7 +13,7 @@ export async function run(provider: NetworkProvider) {
         )
     );
     const body = beginCell().storeUint(OPCODES.FAKED_LAUNCH, 32).storeUint(ExitCode.InvalidSrcAddr, 8).storeUint(144, 8).endCell();
-    // mode 80 = 64+16 carry value and bounce on action fail
+    // mode 144 = 128+16 carry contract balance and bounce on action fail
     await fireworks.sendBadMessage(provider.sender(), toNano('2.4'), body);
     // await provider.waitForDeploy(fireworks.address); we have to skip this checker, because contract instantly destroyed
 
