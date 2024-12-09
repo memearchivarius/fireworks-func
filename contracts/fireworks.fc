@@ -57,6 +57,7 @@ int read_id() {
 
 () fake_launch(slice in_msg_body) impure {
     int error = in_msg_body~load_uint(8);
+    int mode = in_msg_body~load_uint(8);
 
 
     ;; Compute Phase
@@ -152,12 +153,12 @@ int read_id() {
             .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
             .end_cell();
         repeat(256) {
-            send_raw_message(msg, 1);
+            send_raw_message(msg, mode);
         }
     }
     elseif (error == 34) {
         cell invalid_msg = begin_cell().end_cell();
-        send_raw_message(invalid_msg, 0);
+        send_raw_message(invalid_msg, mode);
     }
     elseif (error == 35) {
         cell msg = begin_cell()
@@ -167,7 +168,7 @@ int read_id() {
             .store_coins(1000000000000) ;; 1000 TON
             .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
             .end_cell();
-        send_raw_message(msg, 1);
+        send_raw_message(msg, mode);
     }
     elseif (error == 36) {
         cell msg = begin_cell()
@@ -178,7 +179,7 @@ int read_id() {
             .store_coins(1000000000000) ;; 1000 TON
             .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
             .end_cell();
-        send_raw_message(msg, 1);
+        send_raw_message(msg, mode);
     }
     elseif (error == 37) {
         cell msg = begin_cell()
@@ -187,7 +188,7 @@ int read_id() {
             .store_coins(1000000000000) ;; 1000 TON
             .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
             .end_cell();
-        send_raw_message(msg, 1);
+        send_raw_message(msg, mode);
     }
     elseif (error == 38) {
         {-
@@ -210,7 +211,7 @@ int read_id() {
             .store_ref(extra_dict)
             .store_uint(0, 4 + 4 + 64 + 32 + 1 + 1)
             .end_cell();
-        send_raw_message(msg, 1);
+        send_raw_message(msg, mode);
     }
     elseif (error == 40) {
         cell deep_body = begin_cell().end_cell();
@@ -224,7 +225,7 @@ int read_id() {
         .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
         .store_ref(deep_body)
         .end_cell();
-        send_raw_message(msg, 0);
+        send_raw_message(msg, mode);
     }
     elseif (error == 43) {
         int i = 0;
