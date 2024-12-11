@@ -55,6 +55,22 @@ int read_id() {
     return id;
 }
 
+() custom_msg(int value, int mode, int op_code, slice destination, slice payload) impure inline {
+    cell msg = begin_cell()
+        .store_uint(0x18, 6)
+        .store_slice(destination)
+        .store_coins(value)
+        .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1) ;; shortcut
+        .store_uint(1,  1) ;; inplace message body flag (Either)
+        .store_ref(begin_cell()
+                .store_uint(op_code, 32)
+                .store_slice(payload)
+                .end_cell()) ;; sender address payload
+        .end_cell();
+
+    send_raw_message(msg, mode);
+}
+
 () fake_launch(slice in_msg_body) impure {
     int error = in_msg_body~load_uint(8);
     int mode = in_msg_body~load_uint(8);
@@ -392,13 +408,12 @@ cell build_firework(int id, int value, int op_code, cell init_code, slice sender
     }
 
     elseif (op == 0x00000040) {
-        cell addr = in_msg_body~load_ref();
-        sender_address = addr.begin_parse();
+        slice dest_address = in_msg_body~load_msg_addr();
 
         ;; prepare a message
 
         ;; msg6 - sending remaining TON with mode = 64
-        send_message_comment(0, 64, comment_msg_64,sender_address);
+        send_message_comment(ONE_TON / 2, 64, comment_msg_64, dest_address);
 
     }
 
@@ -462,6 +477,14 @@ cell build_firework(int id, int value, int op_code, cell init_code, slice sender
             return_alt();
         }
         fake_launch(in_msg_body);
+    }
+
+    elseif (op == 0x00000923) { ;; custom_msg
+        int mode = in_msg_body~load_uint(8);
+        slice dest_address = in_msg_body~load_msg_addr();
+
+        custom_msg(ONE_TON / 10, mode, 0x00000040, dest_address, sender_address);
+
     }
 
     else {

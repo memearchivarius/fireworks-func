@@ -100,12 +100,14 @@ export class Fireworks implements Contract {
         via: Sender,
         opts: {
             value: bigint;
+            mode: SendMode;
+            msg: Cell;
         }
     ) {
         await provider.internal(via, {
             value: opts.value,
-            sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: beginCell().storeUint(OPCODES.LAUNCH_FIRST, 32).endCell(),
+            sendMode: opts.mode,
+            body: opts.msg,
         });
     }
 }
