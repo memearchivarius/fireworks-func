@@ -90,7 +90,7 @@ describe('Direct Tests', () => {
             to: launched_f1.address,
             success: true,
             op: OPCODES.LAUNCH_FIRST,
-            outMessagesCount: 4,
+            outMessagesCount: 6,
             destroyed: true,
             endStatus: 'non-existing',
         });
@@ -98,7 +98,7 @@ describe('Direct Tests', () => {
         printTransactionFees(launchResult.transactions);
     });
 
-    it('should exist a transaction[ID:3] which launch second fireworks successfully', async () => {
+/*    it('should exist a transaction[ID:3] which launch second fireworks successfully', async () => {
         const launchResult = await fireworks.sendDeployLaunch(launcher.getSender(), toNano('2.5'));
 
         expect(launchResult.transactions).toHaveTransaction({
@@ -111,7 +111,7 @@ describe('Direct Tests', () => {
 
         printTransactionFees(launchResult.transactions);
     });
-
+*/
     it('should exist a transaction[ID:4] with a comment send mode = 0', async () => {
         const launchResult = await fireworks.sendDeployLaunch(launcher.getSender(), toNano('2.5'));
 

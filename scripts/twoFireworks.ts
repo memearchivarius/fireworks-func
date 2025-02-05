@@ -6,7 +6,7 @@ export async function run(provider: NetworkProvider) {
     const fireworks1 = provider.open(
         Fireworks.createFromConfig(
             {
-                id: 0x7923 /*Math.floor(Math.random() * 10000)*/,
+                id: 0x0923 /*Math.floor(Math.random() * 10000)*/,
             },
             await compile('Fireworks')
         )
@@ -18,7 +18,7 @@ export async function run(provider: NetworkProvider) {
    const fireworks2 = provider.open(
         Fireworks.createFromConfig(
             {
-                id: 0x7924 ,
+                id: 0x0924 ,
             },
             await compile('Fireworks')
         )
@@ -29,8 +29,9 @@ export async function run(provider: NetworkProvider) {
     
     const body_payload = beginCell()
         .storeUint(0x00000923, 32) // op_code
-        .storeUint(64, 8) // msg_mode
+        .storeUint(3, 8) // msg_mode for fw1 to fw2 message 
         .storeAddress(fireworks2.address) //sender address payload
+        .storeUint(0x00000041, 32) // sendop
         .endCell();
     
     await fireworks1.sendLaunch(provider.sender(), {value: toNano('0.1'), mode: SendMode.PAY_GAS_SEPARATELY, msg: body_payload})
