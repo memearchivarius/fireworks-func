@@ -37,20 +37,24 @@ Deploys the root Fireworks contract without triggering any launches.
 
 **Usage:**
 ```bash
-bun blueprint run deployFireworks
+bun blueprint run deployFireworks [flags] [options]
 ```
 
 **Options:**
-- `--id <number>` - Contract ID (default: current timestamp)
-- `--value <string>` - Deployment value in TON (default: `0.05`)
+- `id <number>` - Contract ID (default: current timestamp)
+- `value <string>` - Deployment value in TON (default: `0.05`)
+
+**Flags:**
+- `--testnet`, `--mainnet` - Network selection
+- `--tonconnect`, `--deeplink`, `--mnemonic` - Deployer options
 
 **Examples:**
 ```bash
 # Deploy with default settings
-bun blueprint run deployFireworks
+bun blueprint run deployFireworks --testnet --tonconnect
 
 # Deploy with custom ID and value
-bun blueprint run deployFireworks --id 42 --value 0.1
+bun blueprint run deployFireworks --testnet --tonconnect id 42 value 0.1
 ```
 
 #### 2. `instantFireworks` - Deploy and launch all send modes
@@ -59,21 +63,25 @@ Deploys the root contract and immediately triggers `SET_FIRST`, which launches a
 
 **Usage:**
 ```bash
-bun blueprint run instantFireworks
+bun blueprint run instantFireworks [flags] [options]
 ```
 
 **Options:**
-- `--id <number>` - Contract ID (default: current timestamp)
-- `--deploy-value <string>` - Deployment value in TON (default: `0.05`)
-- `--value <string>` - Launch message value in TON (default: `3`)
+- `id <number>` - Contract ID (default: current timestamp)
+- `deploy-value <string>` - Deployment value in TON (default: `0.05`)
+- `value <string>` - Launch message value in TON (default: `3`)
+
+**Flags:**
+- `--testnet`, `--mainnet` - Network selection
+- `--tonconnect`, `--deeplink`, `--mnemonic` - Deployer options
 
 **Examples:**
 ```bash
 # Deploy and launch with default settings
-bun blueprint run instantFireworks
+bun blueprint run instantFireworks --testnet --tonconnect
 
 # Custom deployment and launch values
-bun blueprint run instantFireworks --deploy-value 0.1 --value 3.5
+bun blueprint run instantFireworks --testnet --tonconnect deploy-value 0.1 value 3.5
 ```
 
 **Result:** Creates 6 messages from `LaunchFirst` (modes 0/1/2/16/17/160) + 6 follow-up child launches (modes 64/65/80/81/128/144).
@@ -84,19 +92,26 @@ Tests various exit codes and edge cases by sending `FAKED_LAUNCH` messages to co
 
 **Usage:**
 ```bash
-# Show menu of available scenarios (interactive mode)
-bun blueprint run fakeFireworks --testnet menu
-
-# Run scenario by index (recommended)
-bun blueprint run fakeFireworks --testnet index <number>
-
-# Show menu without interactive input
-bun blueprint run fakeFireworks --testnet
+bun blueprint run fakeFireworks [flags] [args]
 ```
+
+**Flags:**
+- `--testnet`, `--mainnet` - Network selection
+- `--tonconnect`, `--deeplink`, `--mnemonic` - Deployer options
 
 **Arguments:**
 - `index <number>` - Run scenario by index (0-22)
 - `menu` - Show available scenarios menu and enable interactive selection
+
+**Examples:**
+```bash
+# Show menu of available scenarios (interactive mode)
+bun blueprint run fakeFireworks --testnet --tonconnect menu
+
+# Run scenario by index (recommended)
+bun blueprint run fakeFireworks --testnet --tonconnect index <number>
+
+```
 
 **Quick Reference (by index):**
 
@@ -127,25 +142,18 @@ bun blueprint run fakeFireworks --testnet
 - `21` - not-enough-funds - Not enough funds to process (40)
 - `22` - lib-out-of-limit - Library size exceeds limits (43)
 
-**Examples:**
+**More Examples:**
 ```bash
-# Show available scenarios
-bun blueprint run fakeFireworks --testnet
 
 # Interactive mode - show menu and select scenario
-bun blueprint run fakeFireworks --testnet menu
+bun blueprint run fakeFireworks --testnet --tonconnect menu
 
 # Test success scenario (index 0)
-bun blueprint run fakeFireworks --testnet index 0
+bun blueprint run fakeFireworks --testnet --tonconnect index 0
 
 # Test invalid source address (default, index 17)
-bun blueprint run fakeFireworks --testnet
+bun blueprint run fakeFireworks --testnet --tonconnect
 
 # Test stack overflow (index 3)
-bun blueprint run fakeFireworks --testnet index 3
-
-# Test out of gas scenario (index 12)
-bun blueprint run fakeFireworks --testnet index 12
-
-# Test action list invalid (index 14)
-bun blueprint run fakeFireworks --testnet index 14
+bun blueprint run fakeFireworks --testnet --tonconnect index 3
+```
