@@ -1,6 +1,6 @@
 {
     "name": "Fireworks",
-    "version": "0.0.1",
+    "version": "0.0.3",
     "scripts": {
         "start": "blueprint run",
         "build": "blueprint build",
