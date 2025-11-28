@@ -1,6 +1,6 @@
 # Fireworks
 
-Special demo contract for gas fees and send modes in TON Blockchain.
+Special demo contract for error code generation and send modes testing in TON Blockchain.
 
 ## Project structure
 
