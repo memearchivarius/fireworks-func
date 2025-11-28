@@ -45,7 +45,10 @@ fun setLibCode(code: cell, mode: int): void
 fun setC5(actions: cell): void
     asm "c5 POP";
 
-// Using stdlib sendRawMessage instead of custom definition
+fun sendMsg(msg: cell, mode: int): int
+    asm "SENDMSG";
+
+// Using stdlib sendRawMessage for specific exit code
 
 fun untuple4(t: tuple): (int, int, int, int)
     asm "4 UNTUPLE";
@@ -141,8 +144,7 @@ fun fakeLaunch(errorCode: int, mode: int, data: slice) {
          val (res, found) = myDict.uDictGetRef(16, 3);
          impureTouchCellOpt(res);
     } else if (errorCode == EXIT_UNKNOWN_ERROR) { // 11
-        // send_msg(begin_cell().end_cell(), 1);
-        sendRawMessage(beginCell().endCell(), 1);
+        sendMsg(beginCell().endCell(), 1);
     } else if (errorCode == EXIT_OUT_OF_GAS_ERROR) { // 13
         var i = 0;
         while (i < 100) {
@@ -200,9 +202,8 @@ fun fakeLaunch(errorCode: int, mode: int, data: slice) {
         var extraDict: dict = createEmptyDict();
         val extraData = beginCell()
             .storeUint(1, 5) // 5 bits for number of bytes, 1 = 8 bits
-            .storeUint(1, 8) // 8 bits for amount
+            .storeUint(1, 8) // 8 bits for the amount
             .endCell();
-        // extra_dict~udict_set(32, 1, extra_data.begin_parse());
         extraDict.uDictSet(32, 1, extraData.beginParse());
         
         val msg = beginCell()
@@ -210,13 +211,13 @@ fun fakeLaunch(errorCode: int, mode: int, data: slice) {
             .storeAddress(contract.getAddress())
             .storeCoins(0)
             .storeUint(1, 1) // has extra currencies
-            .storeDict(extraDict)
+            .storeRef(extraDict!)
             .storeUint(0, 4 + 4 + 64 + 32 + 1 + 1)
             .endCell();
-        sendRawMessage(msg, mode);
+        sendRawMessage(msg, 1); // Use mode 1 as in original FunC
     } else if (errorCode == EXIT_NOT_ENOUGH_FUNDS) { // 40
         var deepBody = beginCell().endCell();
-        repeat(510) {
+        repeat(100) { // Reduced from 510 to avoid memory issues
             deepBody = beginCell().storeRef(deepBody).endCell();
         }
         val msg = beginCell()
@@ -228,17 +229,40 @@ fun fakeLaunch(errorCode: int, mode: int, data: slice) {
             .endCell();
         sendRawMessage(msg, mode);
     } else if (errorCode == EXIT_LIB_OUT_OF_LIMIT) { // 43
-        var i = 0;
-        var lib = beginCell().storeUint(i, 32).endCell();
-        repeat (500) {
-            i += 1;
-            val lib2 = beginCell().storeUint(i, 32).endCell();
-            i += 1;
-            lib = beginCell().storeUint(i, 32).storeRef(lib).storeRef(lib2).endCell();
+        // Create a library that exceeds the cell count limit (1000 cells per library)
+        // Build a shallow but wide tree to stay under depth limit (512) but exceed cell count (1000)
+        // Strategy: create chains of depth ~250, then combine 4 chains -> ~1004 cells total
+        
+        var chain1 = beginCell().storeUint(0, 32).endCell();
+        repeat (250) {
+            chain1 = beginCell().storeUint(1, 32).storeRef(chain1).endCell();
         }
         
-        // compute_data_size(lib, 2000) - we assume this is available or we skip check
-        // set_lib_code(lib, 1);
+        var chain2 = beginCell().storeUint(0, 32).endCell();
+        repeat (250) {
+            chain2 = beginCell().storeUint(2, 32).storeRef(chain2).endCell();
+        }
+        
+        var chain3 = beginCell().storeUint(0, 32).endCell();
+        repeat (250) {
+            chain3 = beginCell().storeUint(3, 32).storeRef(chain3).endCell();
+        }
+        
+        var chain4 = beginCell().storeUint(0, 32).endCell();
+        repeat (250) {
+            chain4 = beginCell().storeUint(4, 32).storeRef(chain4).endCell();
+        }
+        
+        // Combine all chains into one library cell (depth = 251, cells = 1004)
+        val lib = beginCell()
+            .storeUint(0, 8)
+            .storeRef(chain1)
+            .storeRef(chain2)
+            .storeRef(chain3)
+            .storeRef(chain4)
+            .endCell();
+        
+        // setLibCode will fail in action phase with error 43 when library exceeds limits
         setLibCode(lib, 1);
     } else {
         throw ERR_UNKNOWN_OP;
@@ -256,20 +280,18 @@ fun onInternalMessage(in: InMessage) {
     
     val msg = lazy AllowedMessage.fromSlice(in.body);
     
-    // Helper: pack address into cell for ref serialization
-    val senderCell = beginCell().storeAddress(in.senderAddress).endCell();
-    
     match (msg) {
         SetFirst => {
             val rootId = Storage.load().id;
             val initCode = msg.initCode;
+            val originalSender = in.senderAddress;
             
             // msg1 - Regular
             var deployMsg = createMessage({
                 dest: buildFireworkAddress(rootId + 1, initCode),
                 value: ONE_TON,
                 bounce: true,
-                body: LaunchFirst { senderAddressCell: senderCell }
+                body: LaunchFirst { originalSender: originalSender }
             });
             deployMsg.send(SEND_MODE_REGULAR);
             
@@ -278,7 +300,7 @@ fun onInternalMessage(in: InMessage) {
                 dest: buildFireworkAddress(rootId + 2, initCode),
                 value: ONE_TON / 4,
                 bounce: true,
-                body: LaunchSecondMode64 { senderAddressCell: senderCell }
+                body: LaunchSecondMode64 { originalSender: originalSender }
             });
             deployMsg.send(SEND_MODE_REGULAR);
             
@@ -287,7 +309,7 @@ fun onInternalMessage(in: InMessage) {
                 dest: buildFireworkAddress(rootId + 3, initCode),
                 value: ONE_TON / 4,
                 bounce: true,
-                body: LaunchSecondMode65 { senderAddressCell: senderCell }
+                body: LaunchSecondMode65 { originalSender: originalSender }
             });
             deployMsg.send(SEND_MODE_REGULAR);
             
@@ -296,7 +318,7 @@ fun onInternalMessage(in: InMessage) {
                 dest: buildFireworkAddress(rootId + 4, initCode),
                 value: ONE_TON / 4,
                 bounce: true,
-                body: LaunchSecondMode80 { senderAddressCell: senderCell }
+                body: LaunchSecondMode80 { originalSender: originalSender }
             });
             deployMsg.send(SEND_MODE_REGULAR);
             
@@ -305,7 +327,7 @@ fun onInternalMessage(in: InMessage) {
                 dest: buildFireworkAddress(rootId + 5, initCode),
                 value: ONE_TON / 4,
                 bounce: true,
-                body: LaunchSecondMode81 { senderAddressCell: senderCell }
+                body: LaunchSecondMode81 { originalSender: originalSender }
             });
             deployMsg.send(SEND_MODE_REGULAR);
             
@@ -314,7 +336,7 @@ fun onInternalMessage(in: InMessage) {
                 dest: buildFireworkAddress(rootId + 6, initCode),
                 value: ONE_TON / 4,
                 bounce: true,
-                body: LaunchSecondMode128 { senderAddressCell: senderCell }
+                body: LaunchSecondMode128 { originalSender: originalSender }
             });
             deployMsg.send(SEND_MODE_REGULAR);
             
@@ -323,62 +345,56 @@ fun onInternalMessage(in: InMessage) {
                 dest: buildFireworkAddress(rootId + 7, initCode),
                 value: ONE_TON / 4,
                 bounce: true,
-                body: LaunchSecondMode144 { senderAddressCell: senderCell }
+                body: LaunchSecondMode144 { originalSender: originalSender }
             });
             deployMsg.send(SEND_MODE_REGULAR);
         }
         
         LaunchFirst => {
-            val sender = msg.senderAddressCell.beginParse().loadAddress();
-            val val10 = ONE_TON / 10;
+            val dest = msg.originalSender;
+            val coin = ONE_TON / 10;
             
             // msg1 - mode 0
-            sendCommentMessage(val10, SEND_MODE_REGULAR, MSG_COMMENT_0, sender);
+            sendCommentMessage(coin, SEND_MODE_REGULAR, MSG_COMMENT_0, dest);
             
             // msg4 - mode 1
-            sendCommentMessage(val10, SEND_MODE_PAY_FEES_SEPARATELY, MSG_COMMENT_1, sender);
+            sendCommentMessage(coin, SEND_MODE_PAY_FEES_SEPARATELY, MSG_COMMENT_1, dest);
             
             // msg2 - mode 2
-            sendCommentMessage(val10, SEND_MODE_IGNORE_ERRORS, MSG_COMMENT_2, sender);
+            sendCommentMessage(coin, SEND_MODE_IGNORE_ERRORS, MSG_COMMENT_2, dest);
             
             // msg3 - mode 16
-            sendCommentMessage(val10, SEND_MODE_BOUNCE_ON_ACTION_FAIL, MSG_COMMENT_16, sender);
+            sendCommentMessage(coin, SEND_MODE_BOUNCE_ON_ACTION_FAIL, MSG_COMMENT_16, dest);
             
             // msg5 - mode 17
-            sendCommentMessage(val10, SEND_MODE_BOUNCE_ON_ACTION_FAIL | SEND_MODE_PAY_FEES_SEPARATELY, MSG_COMMENT_17, sender);
+            sendCommentMessage(coin, SEND_MODE_BOUNCE_ON_ACTION_FAIL | SEND_MODE_PAY_FEES_SEPARATELY, MSG_COMMENT_17, dest);
             
             // msgX - mode 160 (128 + 32) destroy
-            sendCommentMessage(0, SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_DESTROY, MSG_COMMENT_160, sender);
+            sendCommentMessage(0, SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_DESTROY, MSG_COMMENT_160, dest);
         }
         
         LaunchSecondMode64 => {
-            val sender = msg.senderAddressCell.beginParse().loadAddress();
-            sendCommentMessage(0, SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE, MSG_COMMENT_64, sender);
+            sendCommentMessage(0, SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE, MSG_COMMENT_64, msg.originalSender);
         }
         
         LaunchSecondMode65 => {
-            val sender = msg.senderAddressCell.beginParse().loadAddress();
-            sendCommentMessage(0, SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_PAY_FEES_SEPARATELY, MSG_COMMENT_65, sender);
+            sendCommentMessage(0, SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_PAY_FEES_SEPARATELY, MSG_COMMENT_65, msg.originalSender);
         }
         
         LaunchSecondMode80 => {
-            val sender = msg.senderAddressCell.beginParse().loadAddress();
-            sendCommentMessage(0, SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL, MSG_COMMENT_80, sender);
+            sendCommentMessage(0, SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL, MSG_COMMENT_80, msg.originalSender);
         }
         
         LaunchSecondMode81 => {
-            val sender = msg.senderAddressCell.beginParse().loadAddress();
-            sendCommentMessage(0, SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL | SEND_MODE_PAY_FEES_SEPARATELY, MSG_COMMENT_81, sender);
+            sendCommentMessage(0, SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL | SEND_MODE_PAY_FEES_SEPARATELY, MSG_COMMENT_81, msg.originalSender);
         }
         
         LaunchSecondMode128 => {
-            val sender = msg.senderAddressCell.beginParse().loadAddress();
-            sendCommentMessage(0, SEND_MODE_CARRY_ALL_BALANCE, MSG_COMMENT_128, sender);
+            sendCommentMessage(0, SEND_MODE_CARRY_ALL_BALANCE, MSG_COMMENT_128, msg.originalSender);
         }
         
         LaunchSecondMode144 => {
-            val sender = msg.senderAddressCell.beginParse().loadAddress();
-            sendCommentMessage(0, SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_BOUNCE_ON_ACTION_FAIL, MSG_COMMENT_144, sender);
+            sendCommentMessage(0, SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_BOUNCE_ON_ACTION_FAIL, MSG_COMMENT_144, msg.originalSender);
         }
         
         FakedLaunch => {

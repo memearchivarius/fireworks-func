@@ -10,6 +10,11 @@ describe('Direct Tests', () => {
     let fireworks: SandboxContract<Fireworks>;
     let launched_f1: SandboxContract<Fireworks>;
     let launched_f2: SandboxContract<Fireworks>;
+    let launched_f3: SandboxContract<Fireworks>;
+    let launched_f4: SandboxContract<Fireworks>;
+    let launched_f5: SandboxContract<Fireworks>;
+    let launched_f6: SandboxContract<Fireworks>;
+    let launched_f7: SandboxContract<Fireworks>;
 
     let launcher: SandboxContract<TreasuryContract>;
     let initialState: BlockchainSnapshot;
@@ -55,6 +60,51 @@ describe('Direct Tests', () => {
             )
         );
 
+        launched_f3 = blockchain.openContract(
+            Fireworks.createFromConfig(
+                {
+                    id: 3,
+                },
+                code
+            )
+        );
+
+        launched_f4 = blockchain.openContract(
+            Fireworks.createFromConfig(
+                {
+                    id: 4,
+                },
+                code
+            )
+        );
+
+        launched_f5 = blockchain.openContract(
+            Fireworks.createFromConfig(
+                {
+                    id: 5,
+                },
+                code
+            )
+        );
+
+        launched_f6 = blockchain.openContract(
+            Fireworks.createFromConfig(
+                {
+                    id: 6,
+                },
+                code
+            )
+        );
+
+        launched_f7 = blockchain.openContract(
+            Fireworks.createFromConfig(
+                {
+                    id: 7,
+                },
+                code
+            )
+        );
+
         const deployer = await blockchain.treasury('deployer');
         const deployResult = await fireworks.sendDeploy(deployer.getSender(), toNano('0.05'));
         expect(deployResult.transactions).toHaveTransaction({
@@ -90,7 +140,7 @@ describe('Direct Tests', () => {
             to: launched_f1.address,
             success: true,
             op: OPCODES.LAUNCH_FIRST,
-            outMessagesCount: 4,
+            outMessagesCount: 6,
             destroyed: true,
             endStatus: 'non-existing',
         });
@@ -105,7 +155,7 @@ describe('Direct Tests', () => {
             from: fireworks.address,
             to: launched_f2.address,
             success: true,
-            op: OPCODES.LAUNCH_SECOND,
+            op: OPCODES.LAUNCH_SECOND_MODE_64,
             outMessagesCount: 1,
         });
 
