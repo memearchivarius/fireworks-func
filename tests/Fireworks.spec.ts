@@ -145,14 +145,14 @@ describe('Direct Tests', () => {
         });
     });
 
-    it('should exist a transaction[ID:7] with a comment send mode = 128 + 32', async () => {
+    it('should exist a transaction[ID:7] with a comment send mode = 160', async () => {
         const launchResult = await fireworks.sendDeployLaunch(launcher.getSender(), toNano('2.5'));
 
         expect(launchResult.transactions).toHaveTransaction({
             from: launched_f1.address,
             to: launcher.address,
             success: true,
-            body: beginCell().storeUint(0, 32).storeStringTail('send mode = 128 + 32').endCell(), // 0x00000000 comment opcode and encoded comment
+            body: beginCell().storeUint(0, 32).storeStringTail('send mode = 160').endCell(), // 0x00000000 comment opcode and encoded comment
         });
     });
 

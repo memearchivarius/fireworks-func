@@ -1,6 +1,8 @@
 import { CompilerConfig } from '@ton/blueprint';
 
 export const compile: CompilerConfig = {
-    lang: 'func',
-    targets: ['contracts/fireworks.fc'],
+    lang: 'tolk',
+    entrypoint: 'contracts/fireworks/fireworks.tolk',
+    withSrcLineComments: true,
+    withStackComments: true,
 };
