@@ -2,11 +2,10 @@
 
 ;; CONSTS
 const int ONE_TON = 1000000000;
-const int ONE_GRAM = 1;
 
 ;; OP CODES
-const op::launch_first = "op::launch_first"c; ;; create an opcode from string using the "c" prefix, this results in 0x6efe144b opcode in this case
-;; const op::launch_second = "op::launch_second"c; ;; 0xa2e2c2dc
+const op::launch_first = "op::launch_first"c; ;; create an opcode from string using the "c" prefix, this results in 0x7e8764ef opcode in this case
+const op::launch_second = "op::launch_second"c;
 const op::set_first = "op::set_first"c; ;; 0x5720cfeb
 const op::faked_launch = "op::faked_launch"c; ;;0x39041457
 
@@ -14,18 +13,8 @@ const op::faked_launch = "op::faked_launch"c; ;;0x39041457
 const slice comment_msg_0 = "send mode = 0";
 const slice comment_msg_1 = "send mode = 1";
 const slice comment_msg_2 = "send mode = 2";
-const slice comment_msg_16 = "send_mode = 16";
-const slice comment_msg_16+1 = "send_mode = 17";
-const slice comment_msg_32 = "send_mode = 32";
+const slice comment_msg_128+32 = "send mode = 128 + 32";
 const slice comment_msg_64 = "send_mode = 64";
-const slice comment_msg_64+1 = "send_mode = 65";
-const slice comment_msg_64+16 = "send_mode = 80";
-const slice comment_msg_64+16+1 = "send_mode = 81";
-const slice comment_msg_128 = "send_mode = 128";
-const slice comment_msg_128+16 = "send_mode = 144";
-const slice comment_msg_128+32 = "send mode = 160";
-const slice launch_first = "op::launch_first";
-;; const slice launch_second = "op::launch_second (mode=65)";
 
 ;; ASM functions
 () return_alt() impure asm "RETALT"; ;; for alternative return
@@ -57,7 +46,6 @@ int read_id() {
 
 () fake_launch(slice in_msg_body) impure {
     int error = in_msg_body~load_uint(8);
-    int mode = in_msg_body~load_uint(8);
 
 
     ;; Compute Phase
@@ -153,12 +141,12 @@ int read_id() {
             .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
             .end_cell();
         repeat(256) {
-            send_raw_message(msg, mode);
+            send_raw_message(msg, 1);
         }
     }
     elseif (error == 34) {
         cell invalid_msg = begin_cell().end_cell();
-        send_raw_message(invalid_msg, mode);
+        send_raw_message(invalid_msg, 0);
     }
     elseif (error == 35) {
         cell msg = begin_cell()
@@ -168,7 +156,7 @@ int read_id() {
             .store_coins(1000000000000) ;; 1000 TON
             .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
             .end_cell();
-        send_raw_message(msg, mode);
+        send_raw_message(msg, 1);
     }
     elseif (error == 36) {
         cell msg = begin_cell()
@@ -179,7 +167,7 @@ int read_id() {
             .store_coins(1000000000000) ;; 1000 TON
             .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
             .end_cell();
-        send_raw_message(msg, mode);
+        send_raw_message(msg, 1);
     }
     elseif (error == 37) {
         cell msg = begin_cell()
@@ -188,7 +176,7 @@ int read_id() {
             .store_coins(1000000000000) ;; 1000 TON
             .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
             .end_cell();
-        send_raw_message(msg, mode);
+        send_raw_message(msg, 1);
     }
     elseif (error == 38) {
         {-
@@ -211,7 +199,7 @@ int read_id() {
             .store_ref(extra_dict)
             .store_uint(0, 4 + 4 + 64 + 32 + 1 + 1)
             .end_cell();
-        send_raw_message(msg, mode);
+        send_raw_message(msg, 1);
     }
     elseif (error == 40) {
         cell deep_body = begin_cell().end_cell();
@@ -225,7 +213,7 @@ int read_id() {
         .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
         .store_ref(deep_body)
         .end_cell();
-        send_raw_message(msg, mode);
+        send_raw_message(msg, 0);
     }
     elseif (error == 43) {
         int i = 0;
@@ -258,7 +246,7 @@ int read_id() {
     send_raw_message(msg, mode);
 }
 
-cell build_firework(int id, int value, int op_code, cell init_code, slice sender_address) {
+cell build_firework(int id, int op_code, cell init_code, slice sender_address) {
     cell init_data = begin_cell()
         .store_uint(id, 32)
         .end_cell();
@@ -283,7 +271,7 @@ cell build_firework(int id, int value, int op_code, cell init_code, slice sender
     var msg = begin_cell()
         .store_uint(0x18, 6)
         .store_slice(dest_address)
-        .store_coins(value)
+        .store_coins(ONE_TON + ONE_TON / 10)
         ;; serialize CurrencyCollection (see below)
         .store_uint(0, 1 + 4 + 4 + 64 + 32)
         .store_uint(1, 1) ;; state_init added
@@ -304,7 +292,7 @@ cell build_firework(int id, int value, int op_code, cell init_code, slice sender
         return ();
     }
 
-    if (my_balance < ONE_TON / 8) {
+    if (my_balance < ONE_TON) {
         throw(401); ;; not enough balance
     }
 
@@ -323,137 +311,45 @@ cell build_firework(int id, int value, int op_code, cell init_code, slice sender
         int root_id = read_id();
 
 
-        ;; build and send 12 modes fireworks
+        ;; build and send the first fireworks
 
-        cell msg1 = build_firework(root_id + 1, ONE_TON, op::launch_first, init_code, sender_address);
+        cell msg1 = build_firework(root_id + 1, op::launch_first, init_code, sender_address);
         send_raw_message(msg1, 0);
 
-        cell msg2 = build_firework(root_id + 2, ONE_TON / 4, 0x00000040, init_code, sender_address);
+        ;; build and send the second fireworks
+
+        cell msg2 = build_firework(root_id + 2, op::launch_second, init_code, sender_address);
         send_raw_message(msg2, 0);
-
-        cell msg3 = build_firework(root_id + 3, ONE_TON / 4, 0x00000041, init_code, sender_address);
-        send_raw_message(msg3, 0);
-
-        cell msg4 = build_firework(root_id + 4, ONE_TON / 4, 0x00000050, init_code, sender_address);
-        send_raw_message(msg4, 0);
-
-        cell msg5 = build_firework(root_id + 5, ONE_TON / 4, 0x00000051, init_code, sender_address);
-        send_raw_message(msg5, 0);
-
-        cell msg6 = build_firework(root_id + 6, ONE_TON / 4, 0x00000080, init_code, sender_address);
-        send_raw_message(msg6, 0);
-
-        cell msg7 = build_firework(root_id + 7, ONE_TON / 4, 0x00000090, init_code, sender_address);
-        send_raw_message(msg7, 0);
     }
 
     elseif (op == op::launch_first) {
         cell addr = in_msg_body~load_ref();
         sender_address = addr.begin_parse();
 
-        ;; prepare 6 messages https://docs.ton.org/v3/documentation/smart-contracts/message-management/message-modes-cookbook
+        ;; prepare 4 messages
 
-        ;; msg1 - sending 0.1 TON with mode = 0, regular msg
+        ;; msg1 - sending 0.1 TON with mode = 0
         send_message_comment(ONE_TON / 10, 0, comment_msg_0, sender_address);
 
-        ;; msg4 - sending 1 nanoTON with mode = 1, pay fee separately from msg value
-        send_message_comment(ONE_TON / 10, 1, comment_msg_1,sender_address);
+        ;; msg2 - sending 0.1 TON with mode = 1
+        send_message_comment(ONE_TON / 10,  1, comment_msg_1,sender_address);
 
-        ;; msg2 - sending 0.1 TON with mode = 2, ignore action errors
+        ;; msg3 - sending 0.1 TON with mode = 2
         send_message_comment(ONE_TON / 10, 2, comment_msg_2,sender_address);
 
-        ;; msg3 - sending 0.1 TON with mode = 16, bounce on error
-        send_message_comment(ONE_TON / 10, 16, comment_msg_16,sender_address);
-
-        ;; msg5 - sending 1 nanoTON with mode = 17
-         send_message_comment(ONE_TON / 10, 16 + 1, comment_msg_16+1,sender_address);
-        
-        ;; msg6 - sending 0.1 TON with mode = 64
-        ;; send_message_comment(ONE_TON / 10, 64, comment_msg_64,sender_address);
-
-        ;; msg7 - sending 0.1 TON with mode = 65
-        ;; send_message_comment(ONE_TON / 10, 64 + 1, comment_msg_64+1,sender_address);
-
-        ;; msg8 - sending 0.1 TON with mode = 80
-        ;; send_message_comment(ONE_TON / 10, 64 + 16, comment_msg_64+16,sender_address);
-
-        ;; msg9 - sending 0.1 TON with mode = 81
-        ;; send_message_comment(ONE_TON / 10, 64 + 16 + 1, comment_msg_64+16+1,sender_address);
-
-        ;; msg10 - sending 0.1 TON with mode = 128
-        ;; send_message_comment(ONE_TON / 10, 128, comment_msg_128,sender_address);
-
-        ;; msg11 - sending 0.1 TON with mode = 144
-        ;; send_message_comment(ONE_TON / 10, 128 + 16, comment_msg_128+16,sender_address);
-
-        ;; msgX - sending remaining TON with mode = 160
+        ;; msg4 - sending remaining TON with mode = 128 + 32
         ;; 32 is the flag for destroying the contract
-        send_message_comment(0, 128 + 32, comment_msg_128+32,sender_address);
+        send_message_comment(ONE_TON / 10, 128 + 32, comment_msg_128+32,sender_address);
     }
 
-    elseif (op == 0x00000040) {
+    elseif (op == op::launch_second) {
         cell addr = in_msg_body~load_ref();
         sender_address = addr.begin_parse();
 
         ;; prepare a message
 
-        ;; msg6 - sending remaining TON with mode = 64
-        send_message_comment(0, 64, comment_msg_64,sender_address);
-
-    }
-
-    elseif (op == 0x00000041) {
-        cell addr = in_msg_body~load_ref();
-        sender_address = addr.begin_parse();
-
-        ;; prepare a message
-
-        ;; msg7 - sending remaining TON with mode = 65
-        send_message_comment(0, 64 + 1, comment_msg_64+1,sender_address);
-
-    }
-
-    elseif (op == 0x00000050) {
-        cell addr = in_msg_body~load_ref();
-        sender_address = addr.begin_parse();
-
-        ;; prepare a message
-        
-        ;; msg8 - sending remaining TON with mode = 80
-        send_message_comment(0, 64 + 16, comment_msg_64+16,sender_address);
-
-    }
-
-    elseif (op == 0x00000051) {
-        cell addr = in_msg_body~load_ref();
-        sender_address = addr.begin_parse();
-
-        ;; prepare a message
-        
-        ;; msg9 - sending remaining TON with mode = 81
-        send_message_comment(0, 64 + 16 + 1, comment_msg_64+16+1,sender_address);
-
-    }
-
-    elseif (op == 0x00000080) {
-        cell addr = in_msg_body~load_ref();
-        sender_address = addr.begin_parse();
-
-        ;; prepare a message
-        
-        ;; msg10 - sending remaining balance with mode = 128
-        send_message_comment(0, 128, comment_msg_128,sender_address);
-
-    }
-
-    elseif (op == 0x00000090) {
-        cell addr = in_msg_body~load_ref();
-        sender_address = addr.begin_parse();
-
-        ;; prepare a message
-        
-        ;; msg10 - sending remaining balance with mode = 144
-        send_message_comment(0, 128 + 16, comment_msg_128+16,sender_address);
+        ;; msg1 - sending remaining TON with mode = 64
+        send_message_comment(0, 64, comment_msg_64, sender_address);
 
     }
 
